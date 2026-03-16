@@ -7,17 +7,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ── CSS custom ───────────────────────────────────────────────────
-st.markdown("""
-    <style>
-    .main { background-color: #f8f9fa; }
-    .stMetric { background-color: white; padding: 15px; border-radius: 10px; }
-    </style>
-""", unsafe_allow_html=True)
-
-# ── Sidebar navigation ───────────────────────────────────────────
-st.sidebar.image("https://img.icons8.com/color/96/bank-card-back-side.png", width=80)
-st.sidebar.title("Neobank Analytics")
+st.sidebar.title("💳 Neobank Analytics")
 st.sidebar.markdown("---")
 
 page = st.sidebar.radio(
@@ -34,16 +24,18 @@ st.sidebar.markdown("🗓️ Jan 2018 — Mai 2019")
 st.sidebar.markdown("👤 19 430 utilisateurs")
 st.sidebar.markdown("💳 2.74M transactions")
 
-# ── Routing ──────────────────────────────────────────────────────
 if page == "🏠 Accueil":
-    from modules.accueil import show
-    show()
+    st.title("💳 Neobank Analytics")
+    st.markdown("### Bienvenue sur le dashboard d'analyse")
+    
 elif page == "👥 Module 1 — Customer Base":
-    from modules.module1 import show
-    show()
+    st.title("👥 Module 1 — Customer Base & Notifications")
+    st.markdown("### En construction...")
+
 elif page == "💳 Module 2 — Transactions":
-    from modules.module2 import show
-    show()
+    st.title("💳 Module 2 — Transaction Analysis")
+    st.markdown("### En construction...")
+
 elif page == "🤖 Module 3 — Machine Learning":
-    from modules.module3 import show
-    show()
+    st.title("🤖 Module 3 — Machine Learning")
+    st.markdown("### En construction...")
