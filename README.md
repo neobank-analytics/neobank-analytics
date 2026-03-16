@@ -151,5 +151,6 @@ Les notebooks d'analyse sont disponibles sur Google Colab :
 
 | Notebook | Lien |
 |---|---|
-| Module 1 & 2 — EDA | [Ouvrir dans Colab] |
-| Module 3 — ML | [Ouvrir dans Colab] |
+| Module 1 — EDA | [lien du Module 1](https://colab.research.google.com/drive/1D5Fw8hr_07lUND5rfeiTs1YZ_5dTASvz?usp=sharing) |
+| Module 2 — EDA | [lien du Module 2](https://colab.research.google.com/drive/12pkpm4XfVTnCwsZwDzsgGTvUMdtFKEXp?usp=sharing) |
+| Module 3 — ML | [lien du Module 3](https://colab.research.google.com/drive/1wKdNAIQrlbLxdMrm8OPAd0G-BzuG_aV9?usp=sharing) |
