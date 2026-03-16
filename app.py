@@ -1,4 +1,7 @@
 import streamlit as st
+from modules.module1 import show_module1
+from modules.module2 import show_module2
+from modules.module3 import show_module3
 
 st.set_page_config(
     page_title="Neobank Analytics",
@@ -29,13 +32,10 @@ if page == "🏠 Accueil":
     st.markdown("### Bienvenue sur le dashboard d'analyse")
     
 elif page == "👥 Module 1 — Customer Base":
-    st.title("👥 Module 1 — Customer Base & Notifications")
-    st.markdown("### En construction...")
+    show_module1()
 
 elif page == "💳 Module 2 — Transactions":
-    st.title("💳 Module 2 — Transaction Analysis")
-    st.markdown("### En construction...")
+    show_module2()
 
 elif page == "🤖 Module 3 — Machine Learning":
-    st.title("🤖 Module 3 — Machine Learning")
-    st.markdown("### En construction...")
+    show_module3()
