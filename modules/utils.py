@@ -74,6 +74,14 @@ def corp_layout(fig, h=420):
 
 # ── CSS global partagé ────────────────────────────────────────────
 def apply_global_css():
+        st.markdown("""
+    <style>
+        header[data-testid="stHeader"] { display: none; }
+        .stApp [data-testid="stToolbar"] { display: none; }
+        .block-container { padding-top: 1rem; }
+    </style>
+    """, unsafe_allow_html=True)
+
     theme = get_theme()
 
     dark_overrides = ""
