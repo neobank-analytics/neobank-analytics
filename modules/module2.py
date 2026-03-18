@@ -215,8 +215,6 @@ def show_module2():
         )
     )
     st.plotly_chart(fig_map, use_container_width=True)
-    top3 = merchant_country.nlargest(3, 'nb_transactions')
-    st.markdown(f"**Top 3 pays marchands : {' | '.join(top3['ea_merchant_country'].values)} **")
 
     st.markdown("---")
 
