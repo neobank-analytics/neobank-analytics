@@ -5,7 +5,7 @@ Le projet couvre l'ensemble de la chaîne analytique : exploration des données,
 
 **Par Arthur & Matthieu**
 
-🚀 **[Voir le dashboard en ligne]([https://fc8kupji4o4ap5cwgweovj.streamlit.app/](https://neobank-analytics-dnbsrjfvdxuvpsycgvshvg.streamlit.app/))**
+🚀 **[Voir le dashboard en ligne]([https://fc8kupji4o4ap5cwgweovj.streamlit.app/](https://neobank-analytics-dnbsrjfvdxuvpsycgvshvg.streamlit.app/)**
 
 ---
 
