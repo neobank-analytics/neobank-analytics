@@ -95,6 +95,7 @@ def run_clustering(_unused):
     df = pd.read_parquet('data/ml/cluster.parquet')
     meta = json.load(open('data/ml/cluster_meta.json'))
     profil = pd.DataFrame(meta['profil'])
+    profil.index = profil.index.astype(int)
     names = {int(k): v for k, v in meta['names'].items()}
     freq_order = [int(x) for x in meta['freq_order']]
     return df, profil, names, freq_order, meta['inertias'], meta['silhouettes']
