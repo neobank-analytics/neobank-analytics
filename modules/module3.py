@@ -10,13 +10,9 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 import pandas as pd
 import numpy as np
+import json
 
-from sklearn.preprocessing import StandardScaler
-from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score
-from sklearn.ensemble import RandomForestClassifier, IsolationForest
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, precision_score, recall_score, f1_score, confusion_matrix
+from sklearn.metrics import recall_score
 
 from modules.utils import corp_layout, NAVY, ROYAL, BLUE, SKY, PALE, ACCENT, GOLD, GREEN, GREY, RED, AMBER, BORDER
 
@@ -93,132 +89,38 @@ def load_and_prepare():
     return df_tx_clean, df_users, user_features, REF_DATE
 
 
-# ── Modèle 1 : Clustering ───────────────────────────────────────
+# ── Chargement résultats pré-calculés ───────────────────────────
 @st.cache_data
-def run_clustering(_user_features):
-    FEATURES = ['frequence', 'montant_moyen', 'nb_devises', 'pct_online', 'plan_ordinal', 'crypto', 'anciennete']
-    df = _user_features[['user_id'] + FEATURES].dropna()
-
-    scaler = StandardScaler()
-    X = scaler.fit_transform(df[FEATURES])
-
-    # Elbow + Silhouette
-    inertias, silhouettes = [], []
-    for k in range(2, 10):
-        km = KMeans(n_clusters=k, random_state=42, n_init=10)
-        km.fit(X)
-        inertias.append(km.inertia_)
-        silhouettes.append(silhouette_score(X, km.labels_))
-
-    # K=3 pour interprétabilité
-    km_final = KMeans(n_clusters=3, random_state=42, n_init=10)
-    df['cluster'] = km_final.fit_predict(X)
-
-    profil = df.groupby('cluster')[FEATURES].mean()
-    freq_order = profil['frequence'].sort_values(ascending=False).index.tolist()
-    names = {freq_order[0]: 'Engages', freq_order[1]: 'Reguliers', freq_order[2]: 'A Risque'}
-    df['segment'] = df['cluster'].map(names)
-
-    return df, profil, names, freq_order, inertias, silhouettes
+def run_clustering(_unused):
+    df = pd.read_parquet('data/ml/cluster.parquet')
+    meta = json.load(open('data/ml/cluster_meta.json'))
+    profil = pd.DataFrame(meta['profil'])
+    names = {int(k): v for k, v in meta['names'].items()}
+    freq_order = [int(x) for x in meta['freq_order']]
+    return df, profil, names, freq_order, meta['inertias'], meta['silhouettes']
 
 
-# ── Modèle 2 : Churn ────────────────────────────────────────────
 @st.cache_data
-def run_churn(_user_features):
-    FEATURES = ['frequence', 'montant_moyen', 'nb_devises', 'pct_online', 'plan_ordinal', 'crypto', 'anciennete']
-    df = _user_features[FEATURES + ['churn', 'user_id']].dropna()
-
-    X = df[FEATURES]
-    y = df['churn']
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
-
-    rf = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
-    rf.fit(X_train, y_train)
-    y_proba = rf.predict_proba(X_test)[:, 1]
-
-    # Seuil fixé à 0.25 pour maximiser le recall
-    best_t = 0.25
-    best_f1 = 0
-    results = []
-    for t in [0.25, 0.30, 0.35, 0.40, 0.45, 0.50]:
-        yp = (y_proba >= t).astype(int)
-        p, r, f = precision_score(y_test, yp), recall_score(y_test, yp), f1_score(y_test, yp)
-        results.append({'seuil': t, 'precision': p, 'recall': r, 'f1': f})
-        if t == best_t:
-            best_f1 = f
-
-    y_pred = (y_proba >= best_t).astype(int)
-    cm = confusion_matrix(y_test, y_pred)
-
-    # Feature importance
-    importances = pd.DataFrame({'feature': FEATURES, 'importance': rf.feature_importances_}).sort_values('importance', ascending=True)
-
-    # Score sur tous les users
-    df['churn_proba'] = rf.predict_proba(df[FEATURES])[:, 1]
-
-    return df, cm, importances, best_t, best_f1, results, y_test, y_pred, y_proba
+def run_churn(_unused):
+    df = pd.read_parquet('data/ml/churn.parquet')
+    importances = pd.read_parquet('data/ml/churn_importances.parquet')
+    test_data = pd.read_parquet('data/ml/churn_test.parquet')
+    meta = json.load(open('data/ml/churn_meta.json'))
+    cm = np.array(meta['cm'])
+    y_test = test_data['y_test']
+    y_pred = test_data['y_pred'].values
+    y_proba = test_data['y_proba'].values
+    return df, cm, importances, meta['best_t'], meta['best_f1'], meta['results'], y_test, y_pred, y_proba
 
 
-# ── Modèle 3 : Fraude ───────────────────────────────────────────
 @st.cache_data
-def run_fraud(_df_tx_clean):
-    df = _df_tx_clean.copy()
-    df['hour'] = df['created_date'].dt.hour
-    df = df.sort_values(['user_id', 'created_date'])
-
-    # is_new_country chronologique
-    def _is_new_country(group):
-        seen = set()
-        result = []
-        for country in group:
-            if pd.isna(country):
-                result.append(0)
-            else:
-                result.append(int(country not in seen))
-                seen.add(country)
-        return pd.Series(result, index=group.index)
-
-    df['is_new_country'] = df.groupby('user_id')['ea_merchant_country'].apply(_is_new_country).reset_index(level=0, drop=True)
-
-    # Profil par user
-    profile = df.groupby('user_id').agg(
-        mean_amount=('amount_usd', 'mean'), std_amount=('amount_usd', 'std'),
-        median_hour=('hour', 'median'), std_hour=('hour', 'std'),
-        n_txn=('transaction_id', 'count'),
-        pct_online=('ea_cardholderpresence', lambda x: (x == 'FALSE').sum() / x.notna().sum() if x.notna().sum() > 0 else np.nan),
-    ).reset_index()
-    profile['std_amount'] = profile['std_amount'].fillna(0)
-    profile['std_hour'] = profile['std_hour'].fillna(0)
-    profile['pct_online'] = profile['pct_online'].fillna(0.5)
-    profile = profile[profile['n_txn'] >= 5]
-
-    df = df[df['user_id'].isin(profile['user_id'])].copy()
-    df = df.merge(profile, on='user_id', how='left', suffixes=('', '_profile'))
-
-    # Features
-    df['z_score_montant'] = np.where(df['std_amount'] > 0, (df['amount_usd'] - df['mean_amount']) / df['std_amount'], 0)
-    df['z_score_heure'] = np.where(df['std_hour'] > 0, (df['hour'] - df['median_hour']) / df['std_hour'], 0)
-    df['time_since_last'] = df.groupby('user_id')['created_date'].diff().dt.total_seconds()
-    df['time_since_last'] = df['time_since_last'].fillna(df['time_since_last'].median())
-    df['time_since_last_log'] = np.log1p(df['time_since_last'].clip(lower=0))
-
-    df['is_online'] = (df['ea_cardholderpresence'] == 'FALSE').astype(float)
-    df['is_online'] = df['is_online'].where(df['ea_cardholderpresence'].notna(), np.nan)
-    df['card_presence_flip'] = np.where(df['is_online'].isna(), 0, (df['is_online'] - df['pct_online']).abs())
-
-    FEATURES = ['z_score_montant', 'is_new_country', 'z_score_heure', 'time_since_last_log', 'card_presence_flip']
-
-    scaler = StandardScaler()
-    X = scaler.fit_transform(df[FEATURES])
-
-    iso = IsolationForest(n_estimators=100, contamination=0.02, random_state=42)
-    iso.fit(X)
-    df['anomaly_score'] = iso.decision_function(X)
-    df['is_suspect'] = iso.predict(X)
-    df['is_reverted'] = (df['transactions_state'] == 'REVERTED').astype(int)
-
-    return df
+def load_fraud_data():
+    meta = json.load(open('data/ml/fraud_meta.json'))
+    scatter = pd.read_parquet('data/ml/fraud_scatter.parquet')
+    histogram = pd.read_parquet('data/ml/fraud_histogram.parquet')
+    timeline = pd.read_parquet('data/ml/fraud_timeline.parquet')
+    top_users = pd.DataFrame(meta['top_suspect_users'])
+    return meta, scatter, histogram, timeline, top_users
 
 
 # ════════════════════════════════════════════════════════════════
@@ -341,11 +243,12 @@ def show_module3():
            "Maintenant : <strong>segmenter, prédire le churn, détecter la fraude</strong>.")
 
     # Chargement
-    with st.spinner("Chargement des données et entraînement des modèles..."):
-        df_tx_clean, df_users, user_features, REF_DATE = load_and_prepare()
-        df_cluster, profil, names, freq_order, inertias, silhouettes = run_clustering(user_features)
-        df_churn, cm, importances, best_t, best_f1, threshold_results, y_test, y_pred, y_proba = run_churn(user_features)
-        df_fraud = run_fraud(df_tx_clean)
+    with st.spinner("Chargement des données..."):
+        df_cluster, profil, names, freq_order, inertias, silhouettes = run_clustering(None)
+        df_churn, cm, importances, best_t, best_f1, threshold_results, y_test, y_pred, y_proba = run_churn(None)
+        fraud_meta, fraud_scatter, fraud_histogram, fraud_timeline, top_suspect_users = load_fraud_data()
+        n_suspect = fraud_meta['n_suspect']
+        enrichment = fraud_meta['enrichment']
 
     # ── Sous-navigation ──────────────────────────────────────────
     tab1, tab2, tab3, tab4 = st.tabs([
@@ -504,12 +407,10 @@ def show_module3():
     # TAB 3 — FRAUDE
     # ════════════════════════════════════════════════════════════
     with tab3:
-        n_suspect = (df_fraud['is_suspect'] == -1).sum()
-
         c1, c2, c3, c4 = st.columns(4)
         with c1: _num_card("5", "Signaux")
         with c2: _num_card(f"{n_suspect:,}", "Suspectes")
-        with c3: _num_card(f"{100 * n_suspect / len(df_fraud):.1f}%", "Taux")
+        with c3: _num_card(f"{100 * n_suspect / fraud_meta['n_total']:.1f}%", "Taux")
         with c4: _num_card("Isolation Forest", "Algorithme", accent=True)
 
         _chapter("1", "Les 5 signaux de fraude", "Par transaction, relatifs au user")
@@ -531,10 +432,9 @@ def show_module3():
 
         _chapter("2", "Validation REVERTED", "Enrichissement")
 
-        rev_global = df_fraud['is_reverted'].mean()
-        rev_suspect = df_fraud.loc[df_fraud['is_suspect'] == -1, 'is_reverted'].mean()
-        rev_normal = df_fraud.loc[df_fraud['is_suspect'] == 1, 'is_reverted'].mean()
-        enrichment = rev_suspect / rev_global if rev_global > 0 else 0
+        rev_global  = fraud_meta['rev_global']
+        rev_suspect = fraud_meta['rev_suspect']
+        rev_normal  = fraud_meta['rev_normal']
 
         fig = go.Figure(go.Bar(
             x=['Global', 'Normales', 'Suspectes'],
@@ -551,7 +451,7 @@ def show_module3():
 
         _chapter("3", "Scatter — Montant × Heure", "Anomalies en rouge")
 
-        sample = df_fraud.sample(n=min(50000, len(df_fraud)), random_state=42)
+        sample = fraud_scatter.copy()
         sample['label'] = sample['is_suspect'].map({-1: 'Suspect', 1: 'Normal'})
 
         fig = px.scatter(sample, x='z_score_montant', y='z_score_heure', color='label',
@@ -568,11 +468,11 @@ def show_module3():
 
         fig = go.Figure()
         fig.add_trace(go.Histogram(
-            x=df_fraud.loc[df_fraud['is_reverted'] == 0, 'anomaly_score'],
+            x=fraud_histogram.loc[fraud_histogram['is_reverted'] == 0, 'anomaly_score'],
             name='Non-REVERTED', marker_color=BLUE, opacity=0.7, nbinsx=100
         ))
         fig.add_trace(go.Histogram(
-            x=df_fraud.loc[df_fraud['is_reverted'] == 1, 'anomaly_score'],
+            x=fraud_histogram.loc[fraud_histogram['is_reverted'] == 1, 'anomaly_score'],
             name='REVERTED', marker_color=RED, opacity=0.7, nbinsx=100
         ))
         fig = corp_layout(fig, h=420)
@@ -585,15 +485,6 @@ def show_module3():
 
         _chapter("5", "Timeline d'un user suspect", "Sélectionne un user pour inspecter ses transactions")
 
-        # Top 30 users avec le plus de transactions suspectes
-        top_suspect_users = (
-            df_fraud[df_fraud['is_suspect'] == -1]
-            .groupby('user_id').size()
-            .sort_values(ascending=False)
-            .head(30)
-            .reset_index()
-        )
-        top_suspect_users.columns = ['user_id', 'nb_suspects']
         top_suspect_users['label'] = top_suspect_users.apply(
             lambda r: f"{r['user_id']}  ({r['nb_suspects']} suspectes)", axis=1
         )
@@ -607,7 +498,7 @@ def show_module3():
             top_suspect_users['label'] == selected_label, 'user_id'
         ].values[0]
 
-        user_timeline = df_fraud[df_fraud['user_id'] == selected_user].copy()
+        user_timeline = fraud_timeline[fraud_timeline['user_id'] == selected_user].copy()
         user_timeline['label'] = user_timeline['is_suspect'].map({-1: 'Suspect', 1: 'Normal'})
         n_total    = len(user_timeline)
         n_suspects = (user_timeline['is_suspect'] == -1).sum()
@@ -677,7 +568,7 @@ def show_module3():
         for col, title, lines, color in [
             (col1, "Clustering", f"3 segments • Crypto = séparateur principal", GREEN),
             (col2, "Churn", f"{n_churn / n_total:.0%} churnés • Recall {recall_score(y_test, y_pred):.0%} • Seuil {best_t}", AMBER),
-            (col3, "Fraude", f"{n_suspect:,} suspectes ({100 * n_suspect / len(df_fraud):.1f}%) • Enrichissement ×{enrichment:.1f}", RED),
+            (col3, "Fraude", f"{n_suspect:,} suspectes ({100 * n_suspect / fraud_meta['n_total']:.1f}%) • Enrichissement ×{enrichment:.1f}", RED),
         ]:
             with col:
                 st.markdown(f"""
