@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neobank Analytics — Présentation</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg1:#0F0C29;--bg2:#302B63;--bg3:#24243E;--glass:rgba(255,255,255,.06);--glass-border:rgba(255,255,255,.1);--white:#F8F8FF;--dim:rgba(255,255,255,.5);--purple:#7C3AED;--cyan:#06B6D4;--pink:#EC4899;--lime:#84CC16;--amber:#F59E0B;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Sora',sans-serif;color:var(--white);overflow-x:hidden;}
+.slide{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:60px 80px;position:relative;opacity:0;transform:translateY(30px);transition:opacity .6s,transform .6s;}
+.slide.visible{opacity:1;transform:translateY(0);}
+.slide:nth-child(4n+1){background:linear-gradient(135deg,#0F0C29 0%,#302B63 50%,#24243E 100%);}
+.slide:nth-child(4n+2){background:linear-gradient(135deg,#1A1A2E 0%,#16213E 50%,#0F3460 100%);}
+.slide:nth-child(4n+3){background:linear-gradient(135deg,#0F0C29 0%,#1A1A2E 50%,#302B63 100%);}
+.slide:nth-child(4n+4){background:linear-gradient(135deg,#16213E 0%,#0F3460 50%,#24243E 100%);}
+#progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--purple),var(--cyan),var(--pink));z-index:1000;transition:width .3s;}
+#counter{position:fixed;bottom:30px;right:40px;font-size:13px;color:var(--dim);z-index:1000;}
+#dots{position:fixed;right:20px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:1000;}
+.dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2);cursor:pointer;transition:all .3s;}
+.dot.active{background:var(--cyan);box-shadow:0 0 12px var(--cyan);transform:scale(1.4);}
+/* Pitch notes */
+#pitch-panel{position:fixed;bottom:0;left:0;right:0;background:rgba(5,5,20,.97);border-top:2px solid var(--cyan);padding:18px 80px 22px;font-size:.83rem;color:rgba(255,255,255,.8);line-height:1.7;z-index:2000;display:none;max-height:35vh;overflow-y:auto;}
+#pitch-panel.open{display:block;}
+#pitch-toggle{position:fixed;bottom:30px;left:40px;font-size:12px;color:var(--dim);z-index:2001;background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;padding:5px 14px;cursor:pointer;transition:all .2s;}
+#pitch-toggle:hover{border-color:var(--cyan);color:var(--cyan);}
+/* Typography */
+.tag{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:var(--cyan);margin-bottom:16px;}
+h1{font-size:3.5rem;font-weight:800;line-height:1.05;letter-spacing:-1.5px;margin-bottom:20px;background:linear-gradient(135deg,var(--white),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+h2{font-size:2.2rem;font-weight:700;margin-bottom:16px;}
+.sub{font-size:1.1rem;color:var(--dim);line-height:1.7;max-width:700px;margin-bottom:36px;}
+/* KPIs */
+.kpi-row{display:flex;gap:16px;margin:32px 0;}
+.kpi{padding:24px;flex:1;text-align:center;border-radius:16px;background:var(--glass);border:1px solid var(--glass-border);transition:transform .2s;}
+.kpi:hover{transform:translateY(-4px);border-color:var(--cyan);}
+.kpi-val{font-size:2.2rem;font-weight:800;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.kpi-label{font-size:.7rem;color:var(--dim);text-transform:uppercase;letter-spacing:1.5px;margin-top:6px;}
+.kpi.pop .kpi-val{background:linear-gradient(135deg,var(--pink),var(--amber));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+/* Verdict */
+.verdict{background:var(--glass);border:1px solid var(--glass-border);border-left:3px solid var(--cyan);border-radius:12px;padding:20px 24px;margin:20px 0;max-width:800px;}
+.verdict-tag{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--cyan);margin-bottom:6px;}
+.verdict-text{color:var(--dim);font-size:1rem;line-height:1.7;}
+/* Split layout */
+.split{display:flex;gap:40px;align-items:center;}
+.split-text{flex:1;}
+.split-chart{flex:1.2;}
+.chart-box{background:var(--glass);border:1px solid var(--glass-border);border-radius:16px;padding:12px;min-height:300px;}
+/* Big numbers */
+.big{font-size:5rem;font-weight:800;line-height:1;}
+.big.gradient{background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.big.pink{background:linear-gradient(135deg,var(--pink),var(--amber));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.big-label{font-size:.85rem;color:var(--dim);text-transform:uppercase;letter-spacing:2px;margin-top:8px;}
+/* Segments */
+.seg-row{display:flex;gap:16px;margin:28px 0;}
+.seg{flex:1;background:var(--glass);border:1px solid var(--glass-border);border-radius:16px;padding:24px;border-top:3px solid;transition:transform .2s;}
+.seg:hover{transform:translateY(-4px);}
+.seg-emoji{font-size:1.8rem;margin-bottom:10px;}
+.seg-name{font-size:1.1rem;font-weight:700;}
+.seg-pct{font-size:2rem;font-weight:800;margin:6px 0;}
+.seg-desc{font-size:.85rem;color:var(--dim);line-height:1.6;}
+/* Reco */
+.reco-row{display:flex;gap:16px;margin:28px 0;}
+.reco{flex:1;background:var(--glass);border:1px solid var(--glass-border);border-radius:16px;padding:20px;border-left:3px solid;}
+.reco-title{font-weight:700;margin-bottom:6px;}
+.reco-text{font-size:.85rem;color:var(--dim);line-height:1.6;}
+/* End slide */
+.slide-end{text-align:center;}
+.links{display:flex;gap:16px;justify-content:center;margin-top:28px;}
+.link{background:var(--glass);border:1px solid var(--glass-border);border-radius:50px;padding:10px 24px;font-size:.85rem;color:var(--cyan);text-decoration:none;transition:all .2s;}
+.link:hover{background:var(--cyan);color:var(--bg1);border-color:var(--cyan);}
+/* Animations */
+.fade-up{opacity:0;transform:translateY(20px);transition:all .5s ease;}
+.slide.visible .fade-up{opacity:1;transform:translateY(0);}
+.fade-up:nth-child(2){transition-delay:.1s;}
+.fade-up:nth-child(3){transition-delay:.2s;}
+.fade-up:nth-child(4){transition-delay:.3s;}
+@media(max-width:900px){.slide{padding:40px 24px;}h1{font-size:2.2rem;}.split,.kpi-row,.seg-row,.reco-row{flex-direction:column;}}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div id="counter"></div>
+<div id="dots"></div>
+<button id="pitch-toggle" onclick="togglePitch()">📋 Notes (N)</button>
+<div id="pitch-panel"></div>
+
+<!-- S0 TITRE -->
+<div class="slide" data-slide="0"
+data-pitch="Bonjour à tous. Aujourd'hui je vais vous présenter une analyse complète d'une neobank européenne. Le dataset couvre 17 mois de données — de janvier 2018 à mai 2019 — avec 19 430 utilisateurs, 2.74 millions de transactions dans 41 pays. On va voir en 3 modules qui sont ces utilisateurs, comment ils transactent, et ce que le machine learning nous révèle sur leur comportement. 15 minutes, 3 modules, des recommandations concrètes.">
+<div class="fade-up tag">Mars 2026 — Neobank Analytics</div>
+<h1 class="fade-up">19 430 users.<br>2.74M transactions.<br>3 modèles ML.</h1>
+<div class="kpi-row fade-up">
+  <div class="kpi"><div class="kpi-val">19 430</div><div class="kpi-label">Utilisateurs</div></div>
+  <div class="kpi"><div class="kpi-val">2.74M</div><div class="kpi-label">Transactions</div></div>
+  <div class="kpi"><div class="kpi-val">41</div><div class="kpi-label">Pays</div></div>
+  <div class="kpi pop"><div class="kpi-val">×53</div><div class="kpi-label">Croissance 15 mois</div></div>
+</div>
+</div>
+
+<!-- S1 GÉO -->
+<div class="slide" data-slide="1"
+data-pitch="Commençons par savoir qui sont nos utilisateurs. La base est très concentrée géographiquement : le Royaume-Uni représente à lui seul 32% de la base, soit 6 315 users. La France et la Pologne suivent loin derrière avec environ 2 000 chacune. On est clairement sur une neobank européenne à dominante britannique. L'âge médian est de 40 ans, tranche 36-45 dominante. Ce profil est important : c'est une base adulte, pas une base étudiante.">
+<div class="fade-up tag">Module 1 — Customer Base</div>
+<h2 class="fade-up">Qui sont nos utilisateurs ?</h2>
+<div class="split fade-up">
+  <div class="split-chart"><div class="chart-box" id="g-countries"></div></div>
+  <div class="split-text">
+    <div class="kpi-row" style="gap:12px;margin:0 0 16px;">
+      <div class="kpi"><div class="kpi-val">32%</div><div class="kpi-label">UK</div></div>
+      <div class="kpi"><div class="kpi-val">40 ans</div><div class="kpi-label">Âge médian</div></div>
+    </div>
+    <div class="kpi-row" style="gap:12px;margin:0 0 16px;">
+      <div class="kpi pop"><div class="kpi-val">36-45</div><div class="kpi-label">Tranche dominante</div></div>
+      <div class="kpi"><div class="kpi-val">London</div><div class="kpi-label">Ville #1</div></div>
+    </div>
+    <div class="verdict"><div class="verdict-tag">→ insight</div><div class="verdict-text">Base adulte et concentrée UK. Une campagne ciblée GB = impact maximal.</div></div>
+  </div>
+</div>
+</div>
+
+<!-- S2 PLANS + CRYPTO -->
+<div class="slide" data-slide="2"
+data-pitch="La structure des plans est très déséquilibrée : 92.6% des users sont en Standard. C'est à la fois un problème et une opportunité massive d'upsell. Ce qui est frappant c'est l'adoption du crypto : les METAL sont à 59.6% contre seulement 15.4% en Standard. L'activation crypto est un marqueur d'engagement — les users qui l'activent s'investissent vraiment dans la plateforme. On verra dans le module ML que c'est exactement ce qui différencie nos segments.">
+<div class="fade-up tag">Module 1 — Plans & Crypto</div>
+<h2 class="fade-up">92.6% en Standard — levier énorme</h2>
+<div class="split fade-up">
+  <div class="split-chart"><div class="chart-box" id="g-plans"></div></div>
+  <div class="split-text">
+    <div class="chart-box" id="g-crypto" style="min-height:220px;"></div>
+    <div class="verdict" style="margin-top:16px;"><div class="verdict-tag">→ signal</div><div class="verdict-text">Activer le crypto = marqueur d'engagement. METAL à 59.6% vs Standard 15.4%.</div></div>
+  </div>
+</div>
+</div>
+
+<!-- S3 NOTIFICATIONS -->
+<div class="slide" data-slide="3"
+data-pitch="Sur les notifications — sujet critique pour une neobank. Trois canaux, trois réalités très différentes. Le PUSH : 78.5% de délivrabilité, excellent. L'email : 70.5%, acceptable. Le SMS : 34.4% — c'est un canal mort, à abandonner immédiatement. La bonne nouvelle : 95% des users ont l'opt-in PUSH activé. Ce qui signifie qu'on a un canal fiable à 78.5% avec une couverture quasi totale de la base. C'est notre levier numéro un, et on le reverra dans le module 2.">
+<div class="fade-up tag">Module 1 — Notifications</div>
+<h2 class="fade-up">Un canal est mort</h2>
+<div class="split fade-up">
+  <div class="split-text">
+    <div style="margin-bottom:20px;"><span class="big gradient">78.5%</span><div class="big-label">PUSH — canal prioritaire</div></div>
+    <div style="margin-bottom:20px;"><span style="font-size:2.8rem;font-weight:800;color:#F59E0B;">70.5%</span><div class="big-label">EMAIL</div></div>
+    <div style="margin-bottom:20px;"><span style="font-size:2.8rem;font-weight:800;color:#EC4899;">34.4%</span><div class="big-label">SMS — inutilisable</div></div>
+    <div class="verdict"><div class="verdict-tag">→ reco</div><div class="verdict-text">Arrêter le SMS. 95% opt-in PUSH = levier #1 de réengagement.</div></div>
+  </div>
+  <div class="split-chart"><div class="chart-box" id="g-notif"></div></div>
+</div>
+</div>
+
+<!-- S4 CROISSANCE -->
+<div class="slide" data-slide="4"
+data-pitch="On entre dans le module 2, l'analyse des transactions. La croissance est spectaculaire : en 15 mois, le volume mensuel est passé de 6 248 à 334 710 transactions — une multiplication par 53. C'est une croissance organique très saine portée par l'acquisition d'utilisateurs. On voit clairement une inflexion à partir de l'été 2018. On passe de quelques centaines d'users actifs à plus de 11 000 en mars 2019. C'est une startup en pleine hypercroissance.">
+<div class="fade-up tag">Module 2 — Transactions</div>
+<h2 class="fade-up">Croissance fulgurante</h2>
+<div class="fade-up" style="display:flex;align-items:baseline;gap:16px;margin-bottom:20px;">
+  <span class="big pink">×53</span><span style="color:var(--dim);font-size:1.2rem;">en 15 mois · Jan 2018 → Mar 2019</span>
+</div>
+<div class="chart-box fade-up" id="g-growth" style="max-width:950px;"></div>
+</div>
+
+<!-- S5 RADIOGRAPHIE -->
+<div class="slide" data-slide="5"
+data-pitch="En regardant les types de transactions, le CARD_PAYMENT domine avec 1.5 million d'opérations, suivi du TRANSFER et du TOPUP. Côté taux d'échec — là c'est intéressant : le TOPUP a 21.8% d'échec, l'ATM 16.5%, le CARD_PAYMENT 13.5%. Ces points de friction sont significatifs. Un TOPUP sur 5 échoue. C'est une dégradation de l'expérience utilisateur qui peut directement provoquer du churn. On a aussi 81% des paiements qui sont digitaux — profil typiquement digital-first.">
+<div class="fade-up tag">Module 2 — Frictions</div>
+<h2 class="fade-up">Radiographie des transactions</h2>
+<div class="split fade-up">
+  <div class="split-chart"><div class="chart-box" id="g-types"></div></div>
+  <div class="split-chart"><div class="chart-box" id="g-fail"></div></div>
+</div>
+<div class="verdict fade-up"><div class="verdict-tag">→ friction</div><div class="verdict-text">TOPUP 21.8% d'échec · ATM 16.5% · CARD_PAYMENT 13.5% — 81% des paiements en ligne.</div></div>
+</div>
+
+<!-- S6 CAMPAGNES -->
+<div class="slide" data-slide="6"
+data-pitch="Un chiffre clé sur l'impact des campagnes de notification : les utilisateurs notifiés transactent en moyenne 1.9 fois plus que les non-notifiés — 147 transactions contre 76. Ce n'est pas une corrélation anodine. Les notifications poussent directement à l'engagement transactionnel. Combiné au taux d'opt-in PUSH de 95%, c'est un outil d'activation massif. Et si on regarde les raisons des notifications, le réengagement et l'onboarding dominent — exactement ce dont on a besoin pour les segments à risque.">
+<div class="fade-up tag">Module 2 — Campagnes</div>
+<h2 class="fade-up">L'effet notification</h2>
+<div class="split fade-up">
+  <div class="split-chart"><div class="chart-box" id="g-campaign"></div></div>
+  <div class="split-text">
+    <div><span class="big pink">×1.9</span><div class="big-label">Plus de transactions</div></div>
+    <p style="color:var(--dim);line-height:1.7;margin-top:16px;">147 txn/user notifié vs 76 txn/user non notifié.</p>
+    <div class="verdict" style="margin-top:20px;"><div class="verdict-tag">→ conclusion</div><div class="verdict-text">PUSH = 78.5% délivrabilité + 95% opt-in + ×1.9 engagement. C'est le levier #1.</div></div>
+  </div>
+</div>
+</div>
+
+<!-- S7 ML INTRO -->
+<div class="slide" data-slide="7"
+data-pitch="On arrive maintenant à la partie machine learning. On a développé 3 modèles distincts sur les mêmes données. Un K-Means pour segmenter les utilisateurs sans supervision. Un Random Forest pour prédire le churn avant qu'il arrive. Et un Isolation Forest pour détecter les anomalies de fraude — sans aucun label fraude dans les données. Chaque modèle répond à une question business précise.">
+<div class="fade-up tag">Module 3 — Machine Learning</div>
+<h1 class="fade-up">Segmenter.<br>Prédire.<br>Détecter.</h1>
+<div class="kpi-row fade-up">
+  <div class="kpi"><div style="font-size:2.5rem;">🎯</div><div class="kpi-label">K-Means · Segmentation</div></div>
+  <div class="kpi"><div style="font-size:2.5rem;">📉</div><div class="kpi-label">Random Forest · Churn</div></div>
+  <div class="kpi"><div style="font-size:2.5rem;">🔍</div><div class="kpi-label">Isolation Forest · Fraude</div></div>
+</div>
+</div>
+
+<!-- S8 SEGMENTS -->
+<div class="slide" data-slide="8"
+data-pitch="Le K-Means sur 7 features identifie 3 segments très distincts. Les Engagés : 19% de la base, 33 transactions par mois, et 90% ont activé le crypto. Les Réguliers : 64%, 17 transactions par mois, zéro crypto. Les À Risque : 17%, seulement 3.6 transactions par mois, quasi pas de crypto. Le crypto est littéralement le séparateur principal du clustering — les Engagés à 90% contre les Réguliers à 0%. C'est la découverte la plus forte de cette analyse : activer le crypto = signal d'engagement profond.">
+<div class="fade-up tag">Segmentation — K-Means · 3 clusters · 7 features</div>
+<h2 class="fade-up">3 profils identifiés</h2>
+<div class="seg-row fade-up">
+  <div class="seg" style="border-color:#06B6D4;">
+    <div class="seg-emoji">🟢</div>
+    <div class="seg-name">Engagés</div>
+    <div class="seg-pct" style="color:#06B6D4;">19%</div>
+    <div class="seg-desc">33 txn/mois · 90% crypto · Churn 10%</div>
+  </div>
+  <div class="seg" style="border-color:#F59E0B;">
+    <div class="seg-emoji">🟡</div>
+    <div class="seg-name">Réguliers</div>
+    <div class="seg-pct" style="color:#F59E0B;">64%</div>
+    <div class="seg-desc">17 txn/mois · 0% crypto · Churn 18%</div>
+  </div>
+  <div class="seg" style="border-color:#EC4899;">
+    <div class="seg-emoji">🔴</div>
+    <div class="seg-name">À Risque</div>
+    <div class="seg-pct" style="color:#EC4899;">17%</div>
+    <div class="seg-desc">3.6 txn/mois · 9% crypto · Churn 69%</div>
+  </div>
+</div>
+<div class="verdict fade-up"><div class="verdict-tag">→ découverte clé</div><div class="verdict-text">Crypto = séparateur principal. Engagés 90% vs Réguliers 0%. Activer le crypto = s'engager vraiment.</div></div>
+</div>
+
+<!-- S9 CHURN -->
+<div class="slide" data-slide="9"
+data-pitch="Sur le churn, on définit un churné comme un utilisateur inactif depuis plus de 90 jours. 25.1% de la base est dans cet état — près d'un user sur quatre. Le Random Forest, optimisé avec un seuil à 0.25 pour maximiser le recall, détecte 75% des churnés. Pourquoi le recall plutôt que la précision ? Parce qu'un churné raté c'est un client perdu définitivement. Un faux positif c'est juste un email envoyé à tort — coût quasi nul. Les deux features les plus prédictives sont la fréquence et l'ancienneté.">
+<div class="fade-up tag">Churn — Random Forest · Seuil 0.25 · Recall max</div>
+<h2 class="fade-up">1 churné sur 4 — 75% détectés</h2>
+<div class="split fade-up">
+  <div class="split-text">
+    <div class="kpi-row" style="gap:12px;margin:0 0 20px;">
+      <div class="kpi"><div class="kpi-val">25.1%</div><div class="kpi-label">Taux de churn</div></div>
+      <div class="kpi pop"><div class="kpi-val">75%</div><div class="kpi-label">Recall</div></div>
+    </div>
+    <p style="color:var(--dim);line-height:1.7;font-size:.95rem;">Seuil 0.25 · 4 715 churnés / 18 766 users</p>
+    <div class="verdict" style="margin-top:16px;"><div class="verdict-tag">→ résultats</div><div class="verdict-text">703 churnés détectés · 240 ratés · 600 faux positifs.<br>Coût du FP ≈ 0. Coût du FN = client perdu.</div></div>
+  </div>
+  <div class="split-chart"><div class="chart-box" id="g-importance"></div></div>
+</div>
+</div>
+
+<!-- S10 FRAUDE -->
+<div class="slide" data-slide="10"
+data-pitch="Pour la fraude, on n'a aucun label dans les données — on ne sait pas quelles transactions sont frauduleuses. On utilise donc l'Isolation Forest pour détecter les anomalies comportementales. 5 signaux : un montant inhabituel par rapport aux habitudes du user, un pays nouveau, une heure atypique, un burst de transactions très rapprochées, et un changement soudain de mode de paiement. 2% des transactions sont flaggées — 54 604 au total. La validation : les suspectes ont 4.2 fois plus de transactions REVERTED que la moyenne globale. Le modèle détecte quelque chose de réel.">
+<div class="fade-up tag">Fraude — Isolation Forest · 5 signaux · Sans label</div>
+<h2 class="fade-up">54 604 transactions suspectes</h2>
+<div class="split fade-up">
+  <div class="split-text">
+    <div><span class="big gradient">2%</span><div class="big-label">Flaggées suspectes</div></div>
+    <ul style="color:var(--dim);font-size:.9rem;line-height:2.2;padding-left:20px;margin:16px 0;">
+      <li>Montant anormal vs profil user</li>
+      <li>Premier paiement dans ce pays</li>
+      <li>Heure inhabituelle</li>
+      <li>Burst de transactions</li>
+      <li>Changement online ↔ physique</li>
+    </ul>
+  </div>
+  <div class="split-chart"><div class="chart-box" id="g-fraud"></div></div>
+</div>
+<div class="verdict fade-up"><div class="verdict-tag">→ validation</div><div class="verdict-text">Transactions suspectes : 17.1% de REVERTED vs 4.1% en moyenne. Enrichissement ×4.2 — le modèle détecte du réel.</div></div>
+</div>
+
+<!-- S11 SYNTHÈSE -->
+<div class="slide" data-slide="11"
+data-pitch="Le croisement des 3 modèles donne le résultat le plus actionnable de cette analyse. Taux de churn par segment : les Engagés à 10%, les Réguliers à 18%, les À Risque à 69%. Presque 7 utilisateurs sur 10 du segment À Risque sont déjà churnés. Ce segment représente 17% de la base — environ 3 200 users. C'est là que l'urgence est maximale. Et c'est là que les notifications PUSH, avec leur 78.5% de délivrabilité, doivent être déployées en priorité.">
+<div class="fade-up tag">Synthèse — Croisement clustering × churn</div>
+<h2 class="fade-up">À Risque : 69% de churn</h2>
+<div class="split fade-up">
+  <div class="split-chart"><div class="chart-box" id="g-cross"></div></div>
+  <div class="split-text">
+    <p style="color:var(--dim);line-height:1.8;font-size:1rem;">Sur <strong style="color:var(--white);">3 273 users À Risque</strong>, 69% sont déjà churnés ou sur le point de l'être.</p>
+    <div class="verdict" style="margin-top:20px;"><div class="verdict-tag">→ priorité #1</div><div class="verdict-text">Ce segment concentre l'essentiel du churn. Réengagement PUSH immédiat.</div></div>
+    <div class="verdict" style="margin-top:12px;border-left-color:var(--amber);"><div class="verdict-tag" style="color:var(--amber);">→ levier</div><div class="verdict-text">Réguliers (64% de la base) : activer le crypto = les passer en Engagés.</div></div>
+  </div>
+</div>
+</div>
+
+<!-- S12 RECOMMANDATIONS -->
+<div class="slide" data-slide="12"
+data-pitch="Ce qui donne 3 recommandations très concrètes par segment. Pour les Engagés — les 19% qui transactent 33 fois par mois et ont activé le crypto : programme ambassadeur, features exclusives, early access. Ce sont nos meilleurs utilisateurs, il faut les fidéliser. Pour les Réguliers — 64% de la base, le levier de croissance principal : pousser l'activation crypto via PUSH, proposer l'upsell Premium. Pour les À Risque — urgence : campagne de réengagement via PUSH avec une offre incitative, cashback ou avantage temporaire. Et accepter que certains soient irrécupérables.">
+<div class="fade-up tag">Recommandations — Actions par segment</div>
+<h2 class="fade-up">3 segments, 3 stratégies</h2>
+<div class="reco-row fade-up">
+  <div class="reco" style="border-color:#06B6D4;">
+    <div class="reco-title" style="color:#06B6D4;">🟢 Engagés — 19%</div>
+    <div class="reco-text">Programme ambassadeur · Features exclusives · Early access nouveaux produits · Maintenir l'engagement crypto.</div>
+  </div>
+  <div class="reco" style="border-color:#F59E0B;">
+    <div class="reco-title" style="color:#F59E0B;">🟡 Réguliers — 64%</div>
+    <div class="reco-text">Activation crypto via PUSH · Upsell Premium · Notifications personnalisées · C'est le plus grand levier de valeur.</div>
+  </div>
+  <div class="reco" style="border-color:#EC4899;">
+    <div class="reco-title" style="color:#EC4899;">🔴 À Risque — 17%</div>
+    <div class="reco-text">Réengagement urgent PUSH · Cashback incitatif · Accepter les pertes irrécupérables · Prioriser les récents.</div>
+  </div>
+</div>
+</div>
+
+<!-- S13 CONCLUSION -->
+<div class="slide slide-end" data-slide="13"
+data-pitch="En résumé, 4 chiffres à retenir : une croissance ×53 en 15 mois qui prouve la traction du produit. 25% de churn à adresser immédiatement. Un canal PUSH à 78.5% de délivrabilité avec 95% d'opt-in qui est notre meilleur outil. Et un segment À Risque à 69% de churn qui est notre priorité absolue. Merci pour votre attention. Je suis disponible pour vos questions.">
+<div class="fade-up tag">Merci</div>
+<h1 class="fade-up">Questions ?</h1>
+<div class="kpi-row fade-up" style="max-width:700px;margin:32px auto;">
+  <div class="kpi"><div class="kpi-val">×53</div><div class="kpi-label">Croissance</div></div>
+  <div class="kpi pop"><div class="kpi-val">25%</div><div class="kpi-label">Churn à adresser</div></div>
+  <div class="kpi"><div class="kpi-val">PUSH</div><div class="kpi-label">Levier #1</div></div>
+  <div class="kpi pop"><div class="kpi-val">69%</div><div class="kpi-label">À Risque</div></div>
+</div>
+<div class="sub fade-up" style="margin:8px auto;text-align:center;">Neobank Analytics · Mars 2026</div>
+</div>
+
+<!-- Plotly -->
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js" onload="renderCharts()"></script>
+<script>
+function renderCharts() {
+    var CY='#06B6D4', PU='#7C3AED', PK='#EC4899', AM='#F59E0B', WH='#F8F8FF', DM='rgba(255,255,255,.4)', GD='rgba(255,255,255,.08)';
+    var L = {plot_bgcolor:'rgba(0,0,0,0)', paper_bgcolor:'rgba(0,0,0,0)', font:{family:'Sora',color:WH,size:12}, margin:{l:60,r:40,t:50,b:50}};
+
+    // COUNTRIES
+    Plotly.newPlot('g-countries', [{
+        y:['DE','MT','PT','LT','ES','RO','IE','FR','PL','GB'],
+        x:[446,548,604,646,991,1096,1214,2110,2306,6315],
+        type:'bar', orientation:'h', marker:{color:CY},
+        text:[446,548,604,646,991,1096,1214,2110,2306,6315],
+        textposition:'outside', textfont:{size:11,color:DM}
+    }], {...L, height:360, title:{text:'<b>Top 10 pays</b>',font:{size:14,color:WH}},
+        xaxis:{gridcolor:GD}, yaxis:{gridcolor:GD}}, {responsive:true});
+
+    // PLANS
+    Plotly.newPlot('g-plans', [{
+        x:[13868,1247,351], y:['Standard','Premium','Metal'],
+        type:'bar', orientation:'h',
+        marker:{color:[PU,CY,AM]},
+        text:['13 868  (92.6%)','1 247  (8.3%)','351  (2.3%)'],
+        textposition:'outside', textfont:{size:12,color:WH}
+    }], {...L, height:220, margin:{l:80,r:140,t:40,b:40},
+        title:{text:'<b>Répartition par plan</b>',font:{size:14,color:WH}},
+        xaxis:{range:[0,18000], gridcolor:GD, showticklabels:false},
+        yaxis:{gridcolor:GD}}, {responsive:true});
+
+    // CRYPTO
+    Plotly.newPlot('g-crypto', [{
+        x:['Standard','Premium','Metal'], y:[15.4,37.8,59.6],
+        type:'bar', marker:{color:[PU,CY,AM]},
+        text:['15.4%','37.8%','59.6%'],
+        textposition:'outside', textfont:{size:13,color:WH}
+    }], {...L, height:200, margin:{l:40,r:40,t:40,b:40},
+        title:{text:'<b>Adoption crypto par plan (%)</b>',font:{size:14,color:WH}},
+        xaxis:{type:'category', gridcolor:GD},
+        yaxis:{range:[0,80], gridcolor:GD}}, {responsive:true});
+
+    // NOTIFICATIONS
+    Plotly.newPlot('g-notif', [
+        {x:['PUSH','EMAIL','SMS'], y:[45286,43201,990], type:'bar', name:'SENT', marker:{color:CY}},
+        {x:['PUSH','EMAIL','SMS'], y:[12397,18052,1887], type:'bar', name:'FAILED', marker:{color:PK}}
+    ], {...L, barmode:'stack', height:360,
+        title:{text:'<b>Volume par canal</b>',font:{size:14,color:WH}},
+        legend:{orientation:'h', y:1.15, font:{color:DM}},
+        xaxis:{type:'category', gridcolor:GD}, yaxis:{gridcolor:GD},
+        annotations:[
+            {x:'PUSH', y:61000, text:'<b>78.5%</b>', showarrow:false, font:{size:14,color:CY}},
+            {x:'EMAIL', y:65000, text:'<b>70.5%</b>', showarrow:false, font:{size:14,color:AM}},
+            {x:'SMS', y:4800, text:'<b>34.4%</b>', showarrow:false, font:{size:14,color:PK}}
+        ]}, {responsive:true});
+
+    // GROWTH
+    var mo = ['Jan 18','Fév 18','Mar 18','Avr 18','Mai 18','Jun 18','Jul 18','Aoû 18','Sep 18','Oct 18','Nov 18','Déc 18','Jan 19','Fév 19','Mar 19','Avr 19'];
+    var txV = [6248,15265,33505,44333,73270,91326,119659,152079,174752,203537,228287,260099,273568,289517,334710,325913];
+    var usV = [778,1301,2771,3037,4138,5195,6076,7246,8152,9183,10230,11857,11411,11147,11571,11528];
+    Plotly.newPlot('g-growth', [
+        {x:mo, y:txV, type:'bar', name:'Transactions', marker:{color:PU,opacity:.75}, yaxis:'y', hovertemplate:'<b>%{x}</b><br>%{y:,} txn<extra></extra>'},
+        {x:mo, y:usV, type:'scatter', mode:'lines+markers', name:'Users actifs', line:{color:CY,width:3}, marker:{size:5}, yaxis:'y2', hovertemplate:'<b>%{x}</b><br>%{y:,} users<extra></extra>'}
+    ], {...L, height:380,
+        title:{text:'<b>Volume mensuel & Users actifs</b>',font:{size:14,color:WH}},
+        yaxis:{title:{text:'Transactions',font:{color:DM}}, gridcolor:GD},
+        yaxis2:{title:{text:'Users actifs',font:{color:DM}}, overlaying:'y', side:'right', gridcolor:GD},
+        legend:{orientation:'h', y:1.1, font:{color:DM}},
+        xaxis:{tickangle:45, gridcolor:GD, type:'category', categoryorder:'array', categoryarray:mo}
+    }, {responsive:true});
+
+    // TYPES
+    Plotly.newPlot('g-types', [{
+        y:['REFUND','TAX','CARD_REFUND','FEE','CASHBACK','ATM','EXCHANGE','TOPUP','TRANSFER','CARD_PAYMENT'],
+        x:[1493,2829,11962,23659,82789,93675,159148,388331,500409,1475780],
+        type:'bar', orientation:'h', marker:{color:CY},
+        text:['1.5K','2.8K','12K','24K','83K','94K','159K','388K','500K','1.5M'],
+        textposition:'outside', textfont:{size:10,color:DM}
+    }], {...L, height:360, title:{text:'<b>Volume par type</b>',font:{size:14,color:WH}},
+        xaxis:{gridcolor:GD}, yaxis:{gridcolor:GD}}, {responsive:true});
+
+    // FAIL RATES
+    Plotly.newPlot('g-fail', [{
+        y:['FEE','EXCHANGE','REFUND','CARD_REF','TAX','TRANSFER','CASHBACK','CARD_PAY','ATM','TOPUP'],
+        x:[0,0,0,0,0.6,1.4,4.9,13.5,16.5,21.8],
+        type:'bar', orientation:'h',
+        marker:{color:[CY,CY,CY,CY,CY,CY,AM,PK,PK,PK]},
+        text:['0%','0%','0%','0%','0.6%','1.4%','4.9%','13.5%','16.5%','21.8%'],
+        textposition:'outside', textfont:{size:11,color:WH}
+    }], {...L, height:360, title:{text:"<b>Taux d'échec (%)</b>",font:{size:14,color:WH}},
+        xaxis:{gridcolor:GD}, yaxis:{gridcolor:GD}}, {responsive:true});
+
+    // CAMPAIGN
+    Plotly.newPlot('g-campaign', [{
+        x:['Notifié','Non notifié'], y:[147.6,76.1],
+        type:'bar', marker:{color:[CY,PK]},
+        text:['<b>147.6 txn</b>','<b>76.1 txn</b>'],
+        textposition:'outside', textfont:{size:14,color:WH}, width:[0.5,0.5]
+    }], {...L, height:360,
+        title:{text:'<b>Impact des notifications</b>',font:{size:14,color:WH}},
+        xaxis:{type:'category', gridcolor:GD},
+        yaxis:{range:[0,200], gridcolor:GD}}, {responsive:true});
+
+    // FEATURE IMPORTANCE
+    Plotly.newPlot('g-importance', [{
+        y:['Plan','Crypto','% Online','Devises','Montant','Ancienneté','Fréquence'],
+        x:[0.04,0.05,0.08,0.11,0.15,0.25,0.32],
+        type:'bar', orientation:'h',
+        marker:{color:[DM,DM,DM,DM,PU,PU,CY]},
+        text:['0.04','0.05','0.08','0.11','0.15','<b>0.25</b>','<b>0.32</b>'],
+        textposition:'outside', textfont:{size:12,color:WH}
+    }], {...L, height:340,
+        title:{text:'<b>Feature importance — Churn</b>',font:{size:14,color:WH}},
+        xaxis:{range:[0,0.42], gridcolor:GD}, yaxis:{gridcolor:GD}}, {responsive:true});
+
+    // FRAUD ENRICHMENT
+    Plotly.newPlot('g-fraud', [{
+        x:['Global','Normales','Suspectes'], y:[4.1,3.8,17.1],
+        type:'bar', marker:{color:[DM,CY,PK]},
+        text:['<b>4.1%</b>','<b>3.8%</b>','<b>17.1%</b>'],
+        textposition:'outside', textfont:{size:16,color:WH}, width:[0.5,0.5,0.5]
+    }], {...L, height:360,
+        title:{text:'<b>Enrichissement REVERTED ×4.2</b>',font:{size:14,color:WH}},
+        xaxis:{type:'category', gridcolor:GD},
+        yaxis:{title:{text:'% REVERTED',font:{color:DM}}, gridcolor:GD, range:[0,24]}}, {responsive:true});
+
+    // CHURN PAR SEGMENT
+    Plotly.newPlot('g-cross', [{
+        x:['Engagés','Réguliers','À Risque'], y:[10,18,69],
+        type:'bar', marker:{color:[CY,AM,PK]},
+        text:['<b>10%</b>','<b>18%</b>','<b>69%</b>'],
+        textposition:'outside', textfont:{size:22,color:WH}, width:[0.5,0.5,0.5]
+    }], {...L, height:380,
+        title:{text:'<b>Taux de churn réel par segment</b>',font:{size:14,color:WH}},
+        xaxis:{type:'category', gridcolor:GD},
+        yaxis:{title:{text:'% churnés',font:{color:DM}}, gridcolor:GD, range:[0,90]}}, {responsive:true});
+}
+if (typeof Plotly !== 'undefined') { renderCharts(); }
+</script>
+
+<!-- NAV + PITCH -->
+<script>
+var slides = document.querySelectorAll('.slide');
+var dotsC = document.getElementById('dots');
+var progress = document.getElementById('progress');
+var counter = document.getElementById('counter');
+var pitchPanel = document.getElementById('pitch-panel');
+var current = 0;
+var pitchOpen = false;
+
+for (var i = 0; i < slides.length; i++) {
+    var d = document.createElement('div');
+    d.className = 'dot';
+    d.setAttribute('data-i', i);
+    d.onclick = (function(idx){ return function(){ goTo(idx); }; })(i);
+    dotsC.appendChild(d);
+}
+var dots = document.querySelectorAll('.dot');
+
+function goTo(n) {
+    current = Math.max(0, Math.min(n, slides.length - 1));
+    slides[current].scrollIntoView({behavior:'smooth'});
+    updatePitch();
+}
+
+function updatePitch() {
+    var pitch = slides[current].getAttribute('data-pitch') || '';
+    pitchPanel.innerHTML = '<strong style="color:var(--cyan);font-size:.75rem;text-transform:uppercase;letter-spacing:2px;">Slide ' + (current+1) + '/' + slides.length + ' — Notes</strong><br><br>' + pitch;
+}
+
+function togglePitch() {
+    pitchOpen = !pitchOpen;
+    pitchPanel.classList.toggle('open', pitchOpen);
+    updatePitch();
+}
+
+function updateUI() {
+    var w = window.innerHeight;
+    for (var i = 0; i < slides.length; i++) {
+        var r = slides[i].getBoundingClientRect();
+        var c = r.top + r.height / 2;
+        if (c > 0 && c < w) current = i;
+        if (r.top < w * 0.75 && r.bottom > w * 0.25) slides[i].classList.add('visible');
+    }
+    for (var i = 0; i < dots.length; i++) {
+        dots[i].classList.toggle('active', i === current);
+    }
+    progress.style.width = (current / (slides.length - 1)) * 100 + '%';
+    counter.textContent = (current + 1) + '/' + slides.length;
+    if (pitchOpen) updatePitch();
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); goTo(current + 1); }
+    if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); goTo(current - 1); }
+    if (e.key === 'n' || e.key === 'N') { togglePitch(); }
+});
+
+window.addEventListener('scroll', updateUI);
+window.addEventListener('resize', updateUI);
+setTimeout(function() { updateUI(); slides[0].classList.add('visible'); }, 100);
+</script>
+</body>
+</html>
