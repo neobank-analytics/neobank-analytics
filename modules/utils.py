@@ -74,7 +74,7 @@ def corp_layout(fig, h=420):
 
 # ── CSS global partagé ────────────────────────────────────────────
 def apply_global_css():
-        st.markdown("""
+    st.markdown("""
     <style>
         header[data-testid="stHeader"] { display: none; }
         .stApp [data-testid="stToolbar"] { display: none; }
